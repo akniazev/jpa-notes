@@ -1,9 +1,0 @@
-Advanced queries
-	Native SQL can be executed using .createNativeQuery(query, class). It returns untyped Query object, not TypedQuery
-	@NativeNamedQuery(name, query, resultClass) can be defined on the entitties. Can return TypedQuery
-	Entities, read by native SQL become managed, so any change will be saved to the database. 
-		If not all the fields were read by the querry, they will default to null and will overwrite the database values when transaction commits, so read everything
-	Executing navtive SQL to modify data is discouraged, the provider cannot track the changes
-	@SqlResultSetMapping(name, entities) can be places on an entity to define specific mapping of the native query
-	Single-valued relationships are mapped correctly with native query, but there is no way to populate collections
-	
