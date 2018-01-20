@@ -1,0 +1,73 @@
+Lifecycle callbacks
+	Entity can declare special methods(lifecycle callbacks) that will be invoked when a specific event happens
+	The events are Pre-/Post- Persist, Update, Remove and PostLoad
+	PrePersist can also occur on .merge() method call. 
+	If the new relatoinship of an entity has a PERSIST cascade type, the PrePersist will be triggered for it too.
+	If cascade type is REMOVE, remove event is propagated to that entity
+	Post- events do not mean the entity is persisted/removed/updated - they are invoked at the end of the transaction, and it may be rolled back
+	Callback method should return void, not be final or static, can't throw checked exceptions and have an annotation of the event type
+	Same method may be used for several events
+	Runtime exception from lifecycle callback marks the transaction for rollback
+	It's not supported to use EntityManager in the lifecycle callback, but is allowed to use JMS, JNDI, EJB
+Entity listeners
+	The logic can be extracted to separate class, called entity listener. No-arg constructor, no state
+	Only one method in the listener can be annotated for particular event, several annotations on one method are sill allowed
+	The method has to take one parameter of Entity type or supercalss/interface
+	Entity has to be annotated with @EntityListeners({ SomeValidator.class })
+	Listeners are invoked before callbacks on the entity
+	Default listeners are specified in the xml, invoked before others. Entity can use @ExcludeDefaultListeners
+Callbacks for inheritance
+	In case of inheritance, lifecycle callbacks are called from supercalss to subclass
+	Annotating overriden method would cause it to be called insted of it's parent's
+	@EntityListeners with inheritance does not override parent's setting, but adds to it. @ExclueSuperclassListeners to override
+Validation
+	Jpa supports BeanValidation annotations
+	In EE Validator can be injected, in SE use Validation.buildDefaultValidatoinFactory().getValidator()
+	Validation can come in groups, extend Default interface(or pass all groups to the anotation) and pass the class object to validation annotation and to validator
+	validation-mode in xml: AUTO(if provider is present)-default, CALLBACK(throw error is no provider), NONE
+Refresh
+	Refresh operation restores entity state to what is stored in the database.
+	Can be used to revert changes in the entity or refresh state if it might have been modified
+Optimistic locking
+	Optimistic locking: no lock on the entity until the changes are actually made to the database
+	If when the transaction is being flushed the state of the entity in the database was changed OptimisticLockException is thrown
+	Optimistic locking is done via version fields(int/short/long/wrappers/java.sql.Timestamp) with @Version annotation
+	Version fields are no guaranteed to be updated during bulk update queries, but can be updated manualy during it
+	EntityManager.lock() locks objects in the persistence contexst, .find() and .refresh() can take a lock mode
+	Query.setLockMode() sets the lock mode for this particular query
+	LockModeType.OPTIMISTIC(old READ) - repeatabale read, if the transaction accessed data and another transaction modifies it, one of them will fail
+		Usually the provider will just reread the entity before commiting transaction and check that it hasn't change, so the lock and be applied at any point during transaction
+	LockModeType.OPTIMISTIC_FORCE_INCREMENT(old WRITE) - does the same that read does, but increments version no matter the change to the entity
+		Useful for updating non-owned relationships and collections, if an element is added to collection and updated, the version of the first entity will also be increased
+	OptimisticLockException might be wrapped by the container level exception, to prevent it call .flush() from inside the container-managed transaction before it commits (and maybe rethrow custom exception)
+Pessimistic locking
+	Pessimistic locking: obtains the lock on the entity immediately
+	Use pessimistic locking when there is high concurrency of writes on the same object(s) and high occurence of optimistic failures
+	LockModeType.PESSIMISTIC_WRITE is the most common. To avoid stale data has to be aquired in .find() or in .refresh()
+	LockModeType.PESSIMISTIC_READ not commonly used. Achieves repeatable read. If the entity is modified -- upgrated to write lock.
+	LockModeType.PESSIMISTIC_FORCE_INCREMENT mix of two. Similar to read force-increment
+	If the attempt to aquire pessimistic lock fails and the failure is not severe, LockTimeoutExeption is thrown. PessimisticLockException if severe
+
+	javax.persistence.lock.scope set to PessimisticLockScope.EXTENDED locks rows of target tables of unidirectional relationships, element collection tables and owned many-to-many relationships 
+	javax.persistence.lock.timeout sets the timeout for the pessimistic lock wait. 0 - do not block. 
+Caching
+	Application tier. Generally discouraged for difficulties with synchonization with JPA
+	Persistence context. Keeps references to managed entities.
+	EntityManagerFactory(aka second level cache aka shared cache). Entity data is shated accross entity managers, created by it. Has its own API
+	JDBC drive cache. Caches connections, statements, may cache data.
+
+	EntityManagerFactory.getCache() returns the shared cache. Useful for cleanup between the tests. Use in prod is discouraged.
+	shared-cache-mode/javax.persistence.sharedCache.mode: NOT_SPECIFIED, ALL, NONE, DISABLE_SELECTIVE/ENABLE_SELECTIVE (+@Cacheable(false/true))
+	javax.persistence.cache.cacheStoreMode/cacheRetrieveMode hints for EM with values of similarly named types (USE/BYPASS) + REFRESH for store
+Utility classes
+	PersistenceUtils. Persistence.getPersistenceUtils().
+		isLoaded(entity) checks that lazy properties are loaded
+		isLoaded(entity, fieldName) checks for specific field
+	PersistenceUnitUtils. EMF.getPersistenceUnitUtils().
+		same 2 isLoaded
+		getIdentifier(entity) returns id if entity has simple of embeddable id or idClass otherwise
+
+
+
+
+
