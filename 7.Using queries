@@ -1,0 +1,24 @@
+Queries
+	Instead of the table name, the name of the entity with an alias is used
+	Can select entities, not mentioned in the where clause(SELECT e.department FROM Employee e)
+	Result type of a select query cannot be a collection, it must be sinle valued object: entity or field, to navigate accross the collection relationship, a join must be applied
+	Joins: inner, left, right, cross, fetch
+	Supports positional parameters (?1, ?2) and named (:id, :employee)
+	Dynamically generated queries are parsed every time, named queries are parsed once
+	@NamedQuery is usually put on the entity in the query
+	@NamedQueries({}) used to group
+Select
+	Query can be executed by .getResultList() or by .getSingleResult()
+	.getResultList() returns emplty list if no results are found
+	.getSingleResult() throws NoResultException if no result is found and NonUniqueResultException if there are several results
+	Query and TypedQuery objects can be reused as long as their persistence context is alive
+	When the entity is returned by the querry, it becomes managed
+	When the query result will not be modified, the method could be annotated with @TeransactionAttribute(TransactionAttributeType.NOT_SUPPORTED), but it's provider-specific
+	The query can return special result with the constructor expression, if there is an class with a construct, matching the passed values in the query(SELECT NEW com.some.name.Report(emp.name, emp.salary) FROM Employee emp)
+	Query pagination is implemented with .setMaxResults(num) and .setFirstResult(num)
+	em.setFlushMode(mode) can be AUTO or COMMIT. The second tells the provider that the queries do not overlap, so there is no need to do something to insure data consistency.
+	Query objects have 'javax.persistence.query.timeout' hint. After it, QueryTimeoutExeption is thrown, and transaction will be marked for rollback if it's not handled
+Bulk update and delete
+	It's recommended to use @TeransactionAttribute(TransactionAttributeType.REQUIRES_NEW) to insure data consistency
+	Native SQL update and delete should not be used, because the don't invalidate the cache properly
+	Bulk delete does not cascade to relationships even if CascadeType.REMOVE is set
