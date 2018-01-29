@@ -1,0 +1,61 @@
+Table and column names
+	If the name for the table/column needs to be case specific, use escape quotes. @Table(name="\"CaseSpecificName\"")
+	in xml:  <column name=&quot;TheName&quot;>
+	<delimeted-itentifiers/> -- makes all the identifiers delimeted. (additional quotes will be included in the name)
+
+Converting entity state
+	A converter implements AttributeConverter<X,Y>. X-model, Y-database
+	Has a @Converter annotation. @Converter(autoApply=true) makes it run by defalut on all fields of the type X. @Convert(disableConvertion=true) to turn off.
+	To use it put @Convert(converter=BooleanToIntConverter.class) on the entity field
+	To convert attribute of embeddable: @Convert(... attributeName="fieldOfEmbeddable")
+	Same annotatinon for collections. If the collection is a map: attributeName="key || value". "Value" is default
+	Converters can't be used on Id, version and entity fields. Special case: field of an entity that is a key in a map by "key.fieldName"
+	Converters can't be used together with @Temporal and @Enumerated. Only one or another. (those are converters of sorts)
+	When queries are used, literals will be correctly converted (WHERE e.married = true), but if functions are used, the data is distorted(UPPER(), MOD(), NOT) and there is usually an exception
+	Converted attributes are better not used in queries.
+
+Complex embeded objects
+	Embeddables can have it's own embeddables, collections of basic/embeddables and entity relationship
+	Bidirectional relationships are treated as if they exist on the owning entity, the target entity points to it. @ManyToMany(mappedBy="contactInfo.phones")
+	If embedded object is a part of an element collection, it can contain owned relationships(one-to-one, many-to-one) but not one-to-many/many-to-many where the FK is in the target or join table. (Wat?)
+	To override how relationship is mapped use @AssociationOverrides({ @AssociationOverride(name="nameOfTheField", joinColumns=@JoinColumn(name="emp_phone")) })
+	Only embeddables with unidirectional relationships, owned by the source entity can be reused
+
+Compound primary keys
+	Entity can have a compound primary key, extracted in the separate class, primary key class.
+	Primary key class has to have equals/hashCode, no-arg constructor and be public and serializable
+	It's fields must be valid identifier types (primitives, primitive wrappers, String, large numeric types, temporal types)
+	There are two types of compound PK:
+		IdClass. Entity is annotated with @IdClass(EmployeeId.class). @Id is put on all the id-attributes. They have to match attribues in IdClass in both type and name
+		Embedded Id class. Id class is @Embeddable, on the entity field @EmbeddedId is used.
+
+Derrived identifiers
+	When an ID of one entity includes a FK to another entity
+	Rules for derrived indentifiers:
+		A dependent entity might have multiple parents
+		A dependent entity must have all it's relationships to parents set before it can be persisted
+		If an entity has multiple ID attributes, it has to have an IdClass
+		Id of an entity might be a simple type or an entity type, that is the target of a many-to-one/one-to-one
+		If the derrived id is a relationship, the IdClass has to have a field of the same type that is the ID of this entity
+		@MapsId can be used if there is a separate ID attribute and we want to have a relationship to smth(that has the same ID)
+
+Advanced mapping elements
+	@Column and @JoinConlumn have 'insertable' and 'updatable' attributes, that are set to true by default. Setting them to false would effectively make the entity read-only (it can be deleted though)
+	@Basic, @ManyToOne and @OneToOne have 'optional' attribute. If set to true, the field can be null when saved to the database.
+
+Advanced relationships
+	One-to-one and many-to-one don't normally need a join table, but if it already exists @JoinTable is used
+	Unidirectional one-to-many can use the target table's column as a join column. @OneToMany @JoinColumn(name="DepartmentId")
+	If the entity with compound PK is used in a relationship, use @JoinColumns({ @JoinColumn(name="department_id", referencedColumnName="id"), ... }) 
+	@One-to-one and @One-to-many have 'orphanRemoval' attribute. if set to true, the orphan entity is deleted when the relationship is broken (set to null or removed from the collection)
+	If there is a need to save a state together with a relationship(like a date, an employee is assigned to project), the relationship is extracted into separate entity(PeojectAssignment) and both entities define a relationship to it.
+		The ID of the new entity will be the combination of both entities, participating in its state.
+	If the entity mapped to several tables, use @SecondaryTable(name="emp_address" pkJoinColumns={ @PrimaryKeyJoinColumn(name="emp_id") }) and set @Column(table="emp_address") on the fields that should be in the secondary table
+	
+Inheritance
+	Mapped superclass in the relatinship model is like an abstract class in the object model
+	Entity can have transient classes in the hierarchy -- the state defined in those classes will not be saved to the database.
+	@Inheritance(strategy=InheritanceType.SINGLE_TABLE) -- all the subclasses are stored in the single table with null for the missing fields. Wastes space, peak performance. 
+	@Inheritance(strategy=InheritanceType.JOINED) -- state of each superclass in its own table. Saves space, slow with deep hierarchies.
+	@Inheritance(strategy=InheritanceType.TABLE_PER_CLASS) -- each entity has a copy of all fields. Expensive to querry polymorphycly, cheap for concrete class.
+	@DiscriminatorColumn(name="type", discriminatorType=DiscriminatorType.STRING | INTEGER | CHAR) - change discriminator column name and type to specified. String is the default type. @DiscriminatorValue("valueInTable")
