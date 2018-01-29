@@ -1,0 +1,56 @@
+Select
+	Taversing relationships and embeddables is possible with '.' operator
+	When selecting embeddables, the resulting objects will not be managed
+	When there are several return values(e.name, e.salary), collection of zero or more arrays of Object is returned, where the position of the value matches its position in the query
+From + Joins
+	Consists from one or more identification variables and JOIN clauses
+	A join is a query, that combines results from mutiple eneitites
+	An inner join between two entities returns the objects from both entities, that satisfy all the join conditions
+	Path navigation (e.department) is a form of inner join
+	Outer join -- all that satisfy the conditions + all from some side (LEFT, RIGHT)
+	If no join type is specified, the result is CROSS join (Cartesian product)
+	Inner join is equivalent to the cartesian product with join condition int he WHERE clause (SELECT e.name FROM Employee e, Department d WHERE d=e.department === SELECT e.name FROM Employee e JOIN e.department d)
+
+	Inner join example: 'SELECT p FROM Employee e JOIN e.phones p WHERE p.type="Home"'
+	Another form for collections is: 'SELECT p FROM Employee e, IN(e.phones) p WHERE p.type="Home"'. IN indicated a collection
+	'p' in the where clause now references every phone of every employee
+	If the target of the join is a Map, to select value/key/entry use VALUE(m)/KEY(m)/ENTRY(m) in the select clause
+	Outer join example: 'SELECT e, d FROM Employee e LEFT JOIN e.department d'
+	It will return all the employees and the department if exists (if not, the second object is null)
+		'ON' constraint can be added to specify the objects, that will be returned from the right side(ON d.name LIKE "%QA")		-- from 2.1
+		'ON' is different from 'WHERE' because 'WHERE' results in the inner join semantics and filtes left side too					-- from 2.1
+	FETCH JOIN is used to fill the collection of the elements, that otherwise would be loaded laizily
+	FETCH JOIN is inner by default, can add LEFT in front of it to return all of the eintities and fill the collection where possible
+Where
+	Filters the restult set
+	Can have: navigation('.'), unary+/-, *, /, +, -, comparison operators, [NOT] BETWEEN/LIKE/IN/MEMBER [OF], IS [NOT] NULL, IS [NOT] EMPTY, logical AND, OR, NOT
+	BETWEEN: WHERE e.salary BETWEEN 4000 AND 5000   === WHERE e.salary >= 4000 AND e.salary <= 5000
+	LIKE matches string. Wildcards are '_' for single char, '%' for miltiple chars
+	IN checks that a single value is in the given list(WHERE e.name IN ("John", "Jane")). The given list can be a result of a subquery.
+	IS EMPTY is the same as IS NULL, but for collections
+	MEMBER OF checks that the value is in the collection, specified by the path(WHERE :phone MEMBER OF emp.phones)
+
+	Subqueries can be used in WHERE and HAVING clauses
+	It is a complete SELECT query, the result of which is then evaluated in the context of the enclosing explession(SELECT e FROM Employee e WHERE e.salary = (SELECT MAX(emp.salary) FROM Employee emp))
+	Overriding an identifier variable in the subquery is not guaranteed and therefore discouraged
+	Identifier form the original query can be used in subquery to correlate it(SELECT e FROM Employee e WHERE EXISIS (SELECT 1 FROM Phones p WHERE e.phone = p AND p.type = "Home"))
+	FROM caluse of the subquery can be used to create new identification variable from path expression(FROM e.phones p)
+	ANY, All or SOME can be placed in front of a subquery to compare an expression to it (WHERE e.salary < ANY (SELECT d.salary FROM e.directs d)). ANY==SOME.
+
+	To determine the concrete subclass of an entity, use TYPE(e) = :className
+	Enum literals can be used by specifying the fully qualified name of the class(WHERE KEY(m) = com.pack.SomeEnum.ITS_VALUE)
+	Temporal literals: {d 'yyy-mm-dd'}, {t 'hh-mm-ss'} and {ts 'yyy-mm-dd hh-mm-ss.f'}
+Order By
+	Sorts result list by some attribue.
+	Can take multiple attrs with ASC/DESC.	
+Aggregate queries
+	Has GROUP BY or HAVING caluse
+	GROUP BY groups results by given criteria.(SELECT d.name, AVG(e.salary) FROM Department d JOIN d.employees e GROUP BY d.name) -- average salary for each department
+	HAVING is like a WHERE clause that is applied after the GROUP BY is applied
+CASE expressions
+	Can be used anywhere a scalar expression would be valid
+	Variants:
+		CASE {WHEN <condition> THEN <scalar_result} ELSE <scala_result> END
+		CASE <value> {WHEN <scala_expr> THEN <scalar_result} ELSE <scala_result> END
+		COALESE(<scalar_expr>, ...) -- resolves to the first occurence, that is not null
+		NULLIF(<scalar_expr1>, <scalar_expr2>)  -- if exprs are equal, the result is null, else the result is the first expr
