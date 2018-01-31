@@ -1,0 +1,31 @@
+Criteria
+	CriteriaBuilder: from EntityManager, creates CriteriaQuery and contains matching methods like .equal(x, y)
+	CriteriaQuery: from CriteriaBuilder, represents the query, creates Root object. Contains methods with query clauses like .select(). .where() and so on
+	Root: from CriteriaQuery, represents main identification variable of the query (SELECT e FROM Employee e), has .get(field) method to traverse the relationship
+	Join: from Root by calling .join(field, JoinType.SOMETHING). Like root is an ID variable with .get(field) method 
+	ParameterExpression: from CriteriaBuilder, represents the parameter to the query. cb.parameter(String.class, "name")
+	Predicate: from CriteriaBuilder by calling .equal(x, y) or others. Is passed to .where() method to filter the results
+Select
+	CriteriaBuilder has .createQuery(Class<T> c) for typed result, .createQuery() forObject result and .createTupleQuery() for report queries with several return values
+	CriteriaQuery is not related to Query interface, it's just a query definition
+	Invoking .select() or .where() twice on CriteriaQuery overwrites the content, invoking .from() several times results in several query roots(and therefore a Cartesian product)
+	Traversing the path is possible with multiple gets(emp.phone.number == .from(Employee.class).get("phone").get("number"))
+	It's possible to pass generic call to .get() to .select() method, to query for a field: c.select(emp.<String>get("name")) -- generic here is for type inference
+	For compound selection, pass cb.tuple(emp.get(name), ...)
+	Alternative: c.multiselect(...) when the query is created with Object[].class or some special class with defined constructor(for constructor expression)
+	Constructor expression can also be created by passing cb.construct(Report.class, params...) to select method
+	When slecting a Tuple, it's possible to call .alias("someName") on .get() to later access the value in the Tuple object by this alias
+Joins
+	When joining on collections, the result is Join<Parent, TypeInCollection>, with maps: .joinMap() and the resutl is MapJoin<Parent, KeyType, ValueType>
+	Joins are additive, each call resutns new ID variable
+	For fetch-join use root.fetch(field, joinType)
+	JoinType.INNER is the default for both join and fetch
+Where
+	Predicates, to be passed to .where() are mostly created by CriteriaBuilder
+	To build predicates incrementaly, cb.conjunction() for AND or cb.disjunction for OR can be obtained to be passed to cb.and() 
+	Literals can be wrapped with .literal(), to obtain null literal use .nullLiteral()
+
+	Subqueries can be created by calling c.subquery(Some.class)
+	Method .correlate(root) in the Subquery is like a .from(), but it takesa root object, showing that the same variable should be used in the subquery 
+		i.e. (SELECT e FROM Employee e WHERE EXISTS (SELECT P FROM e.projects p WHERE p.name = :name)) becomes => Root<A> root = c.from(A.class); Subquery<B> sq = c.subquery(B.class); Root<A> secondRoot = sq.correlate(root)
+	It's also possible to correlate by join by passing the join to .correlate. The result is the similar join object
