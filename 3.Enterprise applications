@@ -1,0 +1,25 @@
+Transaction management
+	Atomicity: either all changes succeed, or none
+	Consistency: the resulting state of the database is valid with respect to the set of defined rules
+	Isolation: changes, that are being made by the transaction are visible to this transaction only, after commit they are visible to everyone
+	Durability: changes, made in a transaction, survive beyond the completion of the transaction
+
+	Not all of the transactions adhere to those principles, it can be tuned for various reasions
+	Transactions exist on various levels of the app server
+	Resource-local transaction is the lowest form, existing on the level of the database and is equivalent to a database transaction
+	Broader transactions use JTA
+	Resource-local transactions are demarcated manually, container-managed transactions (CMT) are demarcated automatically, Bean-managed transactions (BMT) -- also manually
+	EJB can use any transaction type, Servlets can use only BMT
+	@TransactionAttribute(TransactionAttributeType.THETYPE)
+		REQUIRED: if no transaction -- creates one, if one exists -- proceeds within it
+		REQUIRES_NEW: if no transaction -- creates one, if one exists -- suspends it, executes new transaction and then resumes the old one
+		MANDATORY: if no transaction -- throws TransactionRequiredException, if one exists -- proceeds within it
+		NEVER: if no transaction -- proceeds with the method, if one exists -- throws RemoteException
+		SUPPORTS: if no transaction -- executes without it, if one exists -- executes within it
+		NOT_SUPPORTED: if no transaction -- proceeds with the method, if one exists -- suspends it, executes the method and then resumes the old one
+	If the annotation is defined both on the method and on the class -- the method's takes precedence, if it's not defined at all -- the default REQUIRED is set
+	With BMT comes the expectation, that the transaction will be commited befor the method that started it returns. For EJB, failure to do so results in an exception. This rule does not apply to Stateful session beans
+	Corner case: if EJB bean A with CMT calls a bean B with BMT, the transaction, created by CMT does not propagate, but is suspended before the method of the bean B returns
+	For BMT, to be able to manually control the transaction, javax.transaction.UserTransaction is injected in the bean by @Resource or @Inject
+	Not more than one transaction can be active at the given time at the same thread
+	UserTransaction has .begin(), .commit() .getStatus(), .rollback(), .setRollbackOnly() and .setTransactionTimeout(seconds)
